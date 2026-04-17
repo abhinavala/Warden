@@ -1,39 +1,945 @@
 <!doctype html>
 <html lang="en">
 <head>
-  <meta charset="utf-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>Warden</title>
-  <link rel="stylesheet" href="style.css" />
+<meta charset="utf-8"/>
+<meta name="viewport" content="width=device-width,initial-scale=1"/>
+<title>WARDEN</title>
+<link rel="preconnect" href="https://fonts.googleapis.com"/>
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin/>
+<link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;600;700&display=swap" rel="stylesheet"/>
+<style>
+/* ─── reset ─────────────────────────────────────────────────── */
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+:root{
+  --bg:        #070a0f;
+  --surface:   #0b0e14;
+  --surface2:  #0f1420;
+  --border:    #1a2235;
+  --border2:   #242e42;
+  --text:      #c9d1d9;
+  --muted:     #4a5568;
+  --muted2:    #6b7a96;
+  --green:     #4ade80;
+  --red:       #ef4444;
+  --yellow:    #eab308;
+  --blue:      #38bdf8;
+  --purple:    #a78bfa;
+  --green-dim: rgba(74,222,128,.08);
+  --red-dim:   rgba(239,68,68,.08);
+  --yellow-dim:rgba(234,179,8,.08);
+}
+
+html{height:100%}
+body{
+  min-height:100%;
+  background:var(--bg);
+  color:var(--text);
+  font-family:"JetBrains Mono",Menlo,Monaco,Consolas,monospace;
+  font-size:12.5px;
+  line-height:1.5;
+  /* subtle scanlines */
+  background-image:repeating-linear-gradient(
+    0deg,
+    transparent,
+    transparent 2px,
+    rgba(0,0,0,.08) 2px,
+    rgba(0,0,0,.08) 4px
+  );
+}
+
+/* ─── topbar ─────────────────────────────────────────────────── */
+.topbar{
+  display:flex;
+  align-items:center;
+  justify-content:space-between;
+  padding:0 20px;
+  height:42px;
+  background:#050810;
+  border-bottom:1px solid var(--border);
+  position:sticky;
+  top:0;
+  z-index:100;
+}
+
+.brand{
+  display:flex;
+  align-items:center;
+  gap:10px;
+  font-size:13px;
+  font-weight:700;
+  letter-spacing:.3em;
+  color:#e2e8f0;
+}
+
+.brand-icon{
+  display:inline-flex;
+  align-items:center;
+  justify-content:center;
+  width:22px;height:22px;
+  border:1.5px solid var(--blue);
+  color:var(--blue);
+  font-size:11px;
+  font-weight:700;
+  border-radius:3px;
+  letter-spacing:0;
+}
+
+.brand-sub{
+  font-size:9px;
+  font-weight:400;
+  letter-spacing:.15em;
+  color:var(--muted2);
+  text-transform:uppercase;
+  padding-left:10px;
+  border-left:1px solid var(--border2);
+  margin-left:2px;
+}
+
+.topbar-right{
+  display:flex;
+  align-items:center;
+  gap:20px;
+}
+
+.uptime{
+  font-size:10px;
+  color:var(--muted);
+  letter-spacing:.05em;
+}
+
+.conn{
+  display:inline-flex;
+  align-items:center;
+  gap:7px;
+  font-size:10.5px;
+  letter-spacing:.08em;
+  text-transform:uppercase;
+  padding:3px 10px 3px 8px;
+  border-radius:2px;
+  border:1px solid var(--border2);
+  background:var(--surface2);
+}
+
+.conn .dot{
+  width:7px;height:7px;
+  border-radius:50%;
+  background:var(--red);
+  box-shadow:0 0 0 2px rgba(239,68,68,.2);
+  flex-shrink:0;
+}
+
+.conn-up .dot{
+  background:var(--green);
+  box-shadow:0 0 0 2px rgba(74,222,128,.2);
+  animation:pulse 2s ease-in-out infinite;
+}
+
+.conn-up #conn-label{color:var(--green)}
+.conn-down #conn-label{color:var(--red)}
+#conn-label{font-size:10px}
+
+@keyframes pulse{
+  0%,100%{box-shadow:0 0 0 2px rgba(74,222,128,.2)}
+  50%{box-shadow:0 0 0 4px rgba(74,222,128,.1),0 0 8px rgba(74,222,128,.3)}
+}
+
+/* ─── layout ─────────────────────────────────────────────────── */
+.layout{
+  display:grid;
+  grid-template-columns:340px 1fr;
+  grid-template-rows:auto 1fr;
+  gap:0;
+  height:calc(100vh - 42px);
+  overflow:hidden;
+}
+
+.col-left{
+  grid-column:1;
+  grid-row:1/3;
+  border-right:1px solid var(--border);
+  display:flex;
+  flex-direction:column;
+  overflow:hidden;
+}
+
+.col-right{
+  grid-column:2;
+  grid-row:1/3;
+  display:flex;
+  flex-direction:column;
+  overflow:hidden;
+}
+
+/* ─── panel shell ────────────────────────────────────────────── */
+.panel{
+  display:flex;
+  flex-direction:column;
+  overflow:hidden;
+  border-bottom:1px solid var(--border);
+}
+
+.panel:last-child{border-bottom:none}
+
+.panel-hdr{
+  display:flex;
+  align-items:center;
+  justify-content:space-between;
+  padding:8px 16px;
+  background:var(--surface2);
+  border-bottom:1px solid var(--border);
+  flex-shrink:0;
+}
+
+.panel-title{
+  font-size:9.5px;
+  font-weight:600;
+  letter-spacing:.2em;
+  text-transform:uppercase;
+  color:var(--muted2);
+}
+
+.panel-badge{
+  font-size:9px;
+  color:var(--muted);
+  background:var(--surface);
+  border:1px solid var(--border);
+  padding:1px 6px;
+  border-radius:2px;
+}
+
+.panel-body{
+  overflow-y:auto;
+  flex:1;
+  padding:0;
+}
+
+.panel-body::-webkit-scrollbar{width:4px}
+.panel-body::-webkit-scrollbar-track{background:transparent}
+.panel-body::-webkit-scrollbar-thumb{background:var(--border2);border-radius:2px}
+
+.empty{
+  padding:14px 16px;
+  color:var(--muted);
+  font-size:11px;
+  font-style:italic;
+}
+
+/* ─── active capabilities ────────────────────────────────────── */
+#caps-panel{flex:0 0 auto}
+
+.cap-row{
+  display:flex;
+  flex-direction:column;
+  gap:4px;
+  padding:10px 16px;
+  border-bottom:1px solid var(--border);
+  position:relative;
+}
+
+.cap-row::before{
+  content:"";
+  position:absolute;
+  left:0;top:0;bottom:0;
+  width:3px;
+  background:var(--blue);
+  opacity:.7;
+}
+
+.cap-row:last-child{border-bottom:none}
+
+.cap-top{
+  display:flex;
+  align-items:center;
+  gap:8px;
+}
+
+.cap-handle{
+  color:var(--blue);
+  font-weight:600;
+  font-size:12px;
+  letter-spacing:.02em;
+}
+
+.cap-type-badge{
+  font-size:9px;
+  font-weight:600;
+  letter-spacing:.1em;
+  text-transform:uppercase;
+  padding:1px 6px;
+  border-radius:2px;
+  background:rgba(56,189,248,.1);
+  color:var(--blue);
+  border:1px solid rgba(56,189,248,.2);
+}
+
+.cap-type-badge.groq{
+  background:rgba(167,139,250,.1);
+  color:var(--purple);
+  border-color:rgba(167,139,250,.2);
+}
+
+.cap-scope{
+  font-size:10.5px;
+  color:var(--muted2);
+  padding-left:0;
+}
+
+.cap-bottom{
+  display:flex;
+  align-items:center;
+  justify-content:space-between;
+  margin-top:2px;
+}
+
+.cap-ttl{
+  font-size:10px;
+  color:var(--green);
+  letter-spacing:.03em;
+}
+
+.cap-ttl.expiring{
+  color:var(--yellow);
+  animation:blink-warn 1s step-end infinite;
+}
+
+@keyframes blink-warn{
+  0%,100%{opacity:1}
+  50%{opacity:.4}
+}
+
+.revoke-btn{
+  font-family:inherit;
+  font-size:9px;
+  font-weight:600;
+  letter-spacing:.1em;
+  text-transform:uppercase;
+  background:transparent;
+  color:var(--red);
+  border:1px solid rgba(239,68,68,.4);
+  padding:2px 8px;
+  border-radius:2px;
+  cursor:pointer;
+  transition:background .15s,border-color .15s;
+}
+
+.revoke-btn:hover{
+  background:rgba(239,68,68,.12);
+  border-color:var(--red);
+}
+
+.revoke-btn:disabled{
+  opacity:.35;
+  cursor:not-allowed;
+}
+
+/* ─── credentials panel ──────────────────────────────────────── */
+#creds-panel{flex:1}
+
+.cred-row{
+  display:flex;
+  align-items:center;
+  gap:0;
+  padding:8px 16px;
+  border-bottom:1px solid var(--border);
+}
+
+.cred-row:last-child{border-bottom:none}
+
+.cred-id{
+  color:var(--blue);
+  font-weight:500;
+  width:100px;
+  flex-shrink:0;
+}
+
+.cred-type-badge{
+  font-size:9px;
+  font-weight:600;
+  letter-spacing:.1em;
+  text-transform:uppercase;
+  padding:1px 6px;
+  border-radius:2px;
+  background:#131b2e;
+  color:var(--muted2);
+  border:1px solid var(--border2);
+  margin-right:10px;
+  flex-shrink:0;
+}
+
+.cred-ts{
+  color:var(--muted);
+  font-size:10.5px;
+  flex:1;
+}
+
+.cred-lock{
+  color:var(--muted);
+  font-size:10px;
+  margin-left:6px;
+}
+
+/* ─── timeline ───────────────────────────────────────────────── */
+#timeline-panel{flex:1}
+
+#timeline-panel .panel-body{padding:0}
+
+.ev-row{
+  display:grid;
+  grid-template-columns:68px 1fr auto;
+  gap:0 12px;
+  align-items:baseline;
+  padding:6px 16px;
+  border-bottom:1px solid #0d1117;
+  cursor:pointer;
+  position:relative;
+  transition:background .1s;
+  border-left:3px solid transparent;
+}
+
+.ev-row:hover{background:var(--surface2)}
+
+/* left border + subtle bg by class */
+.ev-green{border-left-color:var(--green)}
+.ev-green:hover{background:var(--green-dim)}
+.ev-red{border-left-color:var(--red)}
+.ev-red:hover{background:var(--red-dim)}
+.ev-yellow{border-left-color:var(--yellow)}
+.ev-yellow:hover{background:var(--yellow-dim)}
+
+.ev-ts{
+  color:var(--muted);
+  font-size:10.5px;
+  font-variant-numeric:tabular-nums;
+  flex-shrink:0;
+}
+
+.ev-center{
+  display:flex;
+  align-items:baseline;
+  gap:8px;
+  overflow:hidden;
+  min-width:0;
+}
+
+.ev-type{
+  font-size:11.5px;
+  font-weight:600;
+  flex-shrink:0;
+}
+
+.ev-green .ev-type{color:var(--green)}
+.ev-red .ev-type{color:var(--red)}
+.ev-yellow .ev-type{color:var(--yellow)}
+
+.ev-detail{
+  color:var(--muted2);
+  font-size:10.5px;
+  overflow:hidden;
+  text-overflow:ellipsis;
+  white-space:nowrap;
+}
+
+.ev-outcome{
+  font-size:9px;
+  font-weight:600;
+  letter-spacing:.1em;
+  text-transform:uppercase;
+  flex-shrink:0;
+  padding:1px 6px;
+  border-radius:2px;
+}
+
+.ev-green .ev-outcome{color:var(--green);background:rgba(74,222,128,.1);border:1px solid rgba(74,222,128,.2)}
+.ev-red .ev-outcome{color:var(--red);background:rgba(239,68,68,.1);border:1px solid rgba(239,68,68,.2)}
+.ev-yellow .ev-outcome{color:var(--yellow);background:rgba(234,179,8,.1);border:1px solid rgba(234,179,8,.2)}
+
+/* expand area */
+.ev-expand{
+  display:none;
+  padding:10px 16px 12px 19px;
+  background:#050810;
+  border-bottom:1px solid var(--border);
+  border-top:1px solid var(--border);
+}
+
+li.open .ev-expand{display:block}
+
+.ev-expand pre{
+  font-size:10.5px;
+  color:#8b98b8;
+  white-space:pre-wrap;
+  word-break:break-word;
+  line-height:1.6;
+}
+
+.ev-expand pre .key{color:#60a5fa}
+.ev-expand pre .str{color:#a3e635}
+.ev-expand pre .num{color:#fb923c}
+.ev-expand pre .null{color:var(--muted)}
+
+/* list reset */
+ul{list-style:none}
+li{display:block}
+
+/* scrollbar shared */
+.panel-body::-webkit-scrollbar{width:4px}
+</style>
 </head>
 <body>
-  <header class="topbar">
-    <div class="brand">WARDEN</div>
-    <div id="conn" class="conn conn-down">
-      <span class="dot"></span><span id="conn-label">Disconnected</span>
+
+<!-- ── topbar ───────────────────────────────────────────── -->
+<header class="topbar">
+  <div class="brand">
+    <span class="brand-icon">W</span>
+    WARDEN
+    <span class="brand-sub">credential broker · MCP-native</span>
+  </div>
+  <div class="topbar-right">
+    <span class="uptime" id="uptime"></span>
+    <div class="conn conn-down" id="conn">
+      <span class="dot"></span>
+      <span id="conn-label">Disconnected</span>
     </div>
-  </header>
+  </div>
+</header>
 
-  <main>
-    <section class="panel">
-      <h2>Active Capabilities</h2>
-      <div id="caps-empty" class="empty">No active capabilities.</div>
-      <ul id="caps" class="caps"></ul>
-    </section>
+<!-- ── main grid ────────────────────────────────────────── -->
+<div class="layout">
 
-    <section class="panel">
-      <h2>Timeline <span class="muted">(live)</span></h2>
-      <div id="events-empty" class="empty">Waiting for events…</div>
-      <ul id="events" class="events"></ul>
-    </section>
+  <!-- left col: caps + creds -->
+  <div class="col-left">
 
-    <section class="panel">
-      <h2>Credentials <span class="muted">(registered)</span></h2>
-      <div id="creds-empty" class="empty">No credentials registered.</div>
-      <ul id="creds" class="creds"></ul>
-    </section>
-  </main>
+    <div class="panel" id="caps-panel">
+      <div class="panel-hdr">
+        <span class="panel-title">Active Capabilities</span>
+        <span class="panel-badge" id="caps-count">0 active</span>
+      </div>
+      <div class="panel-body" id="caps-body">
+        <div class="empty" id="caps-empty">No active capabilities.</div>
+        <ul id="caps"></ul>
+      </div>
+    </div>
 
-  <script src="app.js"></script>
+    <div class="panel" id="creds-panel">
+      <div class="panel-hdr">
+        <span class="panel-title">Credentials</span>
+        <span class="panel-badge">values never exposed</span>
+      </div>
+      <div class="panel-body">
+        <div class="empty" id="creds-empty">No credentials registered.</div>
+        <ul id="creds"></ul>
+      </div>
+    </div>
+
+  </div>
+
+  <!-- right col: timeline -->
+  <div class="col-right">
+
+    <div class="panel" id="timeline-panel">
+      <div class="panel-hdr">
+        <span class="panel-title">Event Timeline</span>
+        <span class="panel-badge" id="events-count">live · 0 events</span>
+      </div>
+      <div class="panel-body" id="events-body">
+        <div class="empty" id="events-empty">Waiting for events…</div>
+        <ul id="events"></ul>
+      </div>
+    </div>
+
+  </div>
+
+</div>
+
+<script>
+// ── config ───────────────────────────────────────────────────────
+const API_BASE = (() => {
+  if ((location.protocol === "http:" || location.protocol === "https:") && location.port === "3000") return "";
+  return "http://localhost:3000";
+})();
+
+const POLL_MS = 1000;
+const RETRY_MS = 3000;
+const EVENTS_LIMIT = 100;
+
+// ── state ────────────────────────────────────────────────────────
+const state = {
+  lastEventId: 0,
+  events: [],
+  openEventIds: new Set(),
+  caps: [],
+  creds: [],
+  connected: false,
+  startedAt: Date.now(),
+  eventsTimer: null,
+  capsTimer: null,
+  credsTimer: null,
+  ttlTimer: null,
+  uptimeTimer: null,
+};
+
+// ── DOM refs ─────────────────────────────────────────────────────
+const $conn        = document.getElementById("conn");
+const $connLabel   = document.getElementById("conn-label");
+const $uptime      = document.getElementById("uptime");
+const $events      = document.getElementById("events");
+const $eventsEmpty = document.getElementById("events-empty");
+const $eventsCount = document.getElementById("events-count");
+const $caps        = document.getElementById("caps");
+const $capsEmpty   = document.getElementById("caps-empty");
+const $capsCount   = document.getElementById("caps-count");
+const $creds       = document.getElementById("creds");
+const $credsEmpty  = document.getElementById("creds-empty");
+
+// ── helpers ──────────────────────────────────────────────────────
+function fmtTime(tsMs) {
+  const d = new Date(tsMs);
+  return [d.getHours(), d.getMinutes(), d.getSeconds()]
+    .map(n => String(n).padStart(2,"0")).join(":");
+}
+
+function fmtTimeSecs(tsSec) { return fmtTime(tsSec * 1000); }
+
+function fmtCountdown(s) {
+  if (s <= 0) return "EXPIRED";
+  return `${Math.floor(s/60)}:${String(Math.floor(s%60)).padStart(2,"0")} remaining`;
+}
+
+function fmtUptime(ms) {
+  const s = Math.floor(ms / 1000);
+  const m = Math.floor(s / 60);
+  const h = Math.floor(m / 60);
+  if (h > 0) return `up ${h}h ${m%60}m`;
+  if (m > 0) return `up ${m}m ${s%60}s`;
+  return `up ${s}s`;
+}
+
+function colorClass(ev) {
+  const t = ev.event_type, o = ev.outcome;
+  if (t === "sanitizer_redacted") return "ev-yellow";
+  if (t === "capability_denied" || t === "tool_blocked" || t === "leak_detected") return "ev-red";
+  if (t === "tool_called") return o === "error" ? "ev-red" : "ev-green";
+  return "ev-green";
+}
+
+function safeJson(s) {
+  if (s == null) return null;
+  if (typeof s !== "string") return s;
+  try { return JSON.parse(s); } catch { return s; }
+}
+
+function shortDetail(ev) {
+  const parts = [];
+  if (ev.tool) parts.push(ev.tool);
+  if (ev.detail) parts.push(ev.detail);
+  if (!parts.length && ev.args_redacted) {
+    const a = safeJson(ev.args_redacted);
+    if (a && typeof a === "object") parts.push(`{${Object.keys(a).slice(0,3).join(", ")}}`);
+  }
+  return parts.join("  ·  ");
+}
+
+function scopeSummary(capType, scope) {
+  if (!scope || typeof scope !== "object") return String(scope ?? "");
+  if (capType === "github") {
+    const p = Array.isArray(scope.permissions) ? scope.permissions.join(", ") : "";
+    return `repo=${scope.repo || "?"}  ·  perms=[${p}]`;
+  }
+  if (capType === "groq") {
+    const m = Array.isArray(scope.models) ? scope.models.join(", ") : "";
+    const t = scope.max_tokens_per_call != null ? `  ·  max_tokens=${scope.max_tokens_per_call}` : "";
+    return `models=[${m}]${t}`;
+  }
+  try { return JSON.stringify(scope); } catch { return String(scope); }
+}
+
+// syntax-highlight JSON for expand view
+function highlightJson(obj) {
+  const raw = JSON.stringify(obj, null, 2);
+  return raw
+    .replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;")
+    .replace(/("[\w_]+")\s*:/g,'<span class="key">$1</span>:')
+    .replace(/:\s*(".*?")/g,': <span class="str">$1</span>')
+    .replace(/:\s*(\d+\.?\d*)/g,': <span class="num">$1</span>')
+    .replace(/:\s*(null)/g,': <span class="null">$1</span>');
+}
+
+// ── network ──────────────────────────────────────────────────────
+async function getJSON(path) {
+  const r = await fetch(`${API_BASE}${path}`);
+  if (!r.ok) throw new Error(`HTTP ${r.status}`);
+  return r.json();
+}
+
+async function postJSON(path) {
+  const r = await fetch(`${API_BASE}${path}`, { method: "POST" });
+  if (!r.ok) throw new Error(`HTTP ${r.status}`);
+  return r.json();
+}
+
+// ── polling ──────────────────────────────────────────────────────
+async function pollEvents() {
+  try {
+    const data = await getJSON(`/api/events?since=${state.lastEventId}&limit=${EVENTS_LIMIT}`);
+    setConnected(true);
+    if (data?.events?.length) {
+      for (const ev of data.events) state.events.unshift(ev);
+      state.lastEventId = typeof data.latest_id === "number"
+        ? Math.max(state.lastEventId, data.latest_id)
+        : Math.max(...data.events.map(e => e.id), state.lastEventId);
+      if (state.events.length > 500) state.events.length = 500;
+      renderEvents();
+    }
+    scheduleEvents(POLL_MS);
+  } catch { setConnected(false); scheduleEvents(RETRY_MS); }
+}
+
+async function pollCaps() {
+  try {
+    const data = await getJSON("/api/active_capabilities");
+    setConnected(true);
+    state.caps = data?.capabilities ?? [];
+    renderCaps();
+    scheduleCaps(POLL_MS);
+  } catch { setConnected(false); scheduleCaps(RETRY_MS); }
+}
+
+async function pollCreds() {
+  try {
+    const data = await getJSON("/api/credentials");
+    setConnected(true);
+    state.creds = data?.credentials ?? [];
+    renderCreds();
+    scheduleCreds(5000);
+  } catch { setConnected(false); scheduleCreds(RETRY_MS); }
+}
+
+function scheduleEvents(ms) { clearTimeout(state.eventsTimer); state.eventsTimer = setTimeout(pollEvents, ms); }
+function scheduleCaps(ms)   { clearTimeout(state.capsTimer);   state.capsTimer   = setTimeout(pollCaps, ms); }
+function scheduleCreds(ms)  { clearTimeout(state.credsTimer);  state.credsTimer  = setTimeout(pollCreds, ms); }
+
+// ── connection ───────────────────────────────────────────────────
+function setConnected(up) {
+  if (state.connected === up) return;
+  state.connected = up;
+  $conn.classList.toggle("conn-up", up);
+  $conn.classList.toggle("conn-down", !up);
+  $connLabel.textContent = up ? "Connected" : "Disconnected";
+}
+
+// ── render: events ───────────────────────────────────────────────
+function renderEvents() {
+  $eventsCount.textContent = `live · ${state.events.length} event${state.events.length !== 1 ? "s" : ""}`;
+  if (!state.events.length) {
+    $eventsEmpty.style.display = "";
+    $events.innerHTML = "";
+    return;
+  }
+  $eventsEmpty.style.display = "none";
+  const frag = document.createDocumentFragment();
+
+  for (const ev of state.events) {
+    const li = document.createElement("li");
+    if (state.openEventIds.has(ev.id)) li.classList.add("open");
+    li.dataset.id = String(ev.id);
+
+    // main row
+    const row = document.createElement("div");
+    row.className = `ev-row ${colorClass(ev)}`;
+
+    const ts = document.createElement("span");
+    ts.className = "ev-ts";
+    ts.textContent = fmtTime(ev.ts);
+
+    const center = document.createElement("div");
+    center.className = "ev-center";
+
+    const etype = document.createElement("span");
+    etype.className = "ev-type";
+    etype.textContent = ev.event_type;
+
+    const detail = document.createElement("span");
+    detail.className = "ev-detail";
+    detail.textContent = shortDetail(ev);
+
+    center.appendChild(etype);
+    center.appendChild(detail);
+
+    const outcome = document.createElement("span");
+    outcome.className = "ev-outcome";
+    outcome.textContent = ev.outcome || "";
+
+    row.appendChild(ts);
+    row.appendChild(center);
+    row.appendChild(outcome);
+
+    // expand
+    const exp = document.createElement("div");
+    exp.className = "ev-expand";
+    const pre = document.createElement("pre");
+    pre.innerHTML = highlightJson({
+      id: ev.id, ts: ev.ts, run_id: ev.run_id,
+      capability_id: ev.capability_id,
+      event_type: ev.event_type, tool: ev.tool,
+      args_redacted: safeJson(ev.args_redacted),
+      outcome: ev.outcome, detail: ev.detail,
+      duration_ms: ev.duration_ms,
+    });
+    exp.appendChild(pre);
+
+    row.addEventListener("click", () => {
+      if (state.openEventIds.has(ev.id)) {
+        state.openEventIds.delete(ev.id);
+        li.classList.remove("open");
+      } else {
+        state.openEventIds.add(ev.id);
+        li.classList.add("open");
+      }
+    });
+
+    li.appendChild(row);
+    li.appendChild(exp);
+    frag.appendChild(li);
+  }
+  $events.replaceChildren(frag);
+}
+
+// ── render: capabilities ─────────────────────────────────────────
+function renderCaps() {
+  $capsCount.textContent = `${state.caps.length} active`;
+  if (!state.caps.length) {
+    $capsEmpty.style.display = "";
+    $caps.innerHTML = "";
+    return;
+  }
+  $capsEmpty.style.display = "none";
+  const now = Math.floor(Date.now() / 1000);
+  const frag = document.createDocumentFragment();
+
+  for (const c of state.caps) {
+    const li = document.createElement("li");
+
+    const wrap = document.createElement("div");
+    wrap.className = "cap-row";
+
+    const top = document.createElement("div");
+    top.className = "cap-top";
+
+    const handle = document.createElement("span");
+    handle.className = "cap-handle";
+    handle.textContent = c.id;
+
+    const badge = document.createElement("span");
+    badge.className = `cap-type-badge${c.cap_type === "groq" ? " groq" : ""}`;
+    badge.textContent = c.cap_type;
+
+    top.appendChild(handle);
+    top.appendChild(badge);
+
+    const scope = document.createElement("div");
+    scope.className = "cap-scope";
+    scope.textContent = scopeSummary(c.cap_type, safeJson(c.scope));
+
+    const bottom = document.createElement("div");
+    bottom.className = "cap-bottom";
+
+    const ttl = document.createElement("span");
+    ttl.className = "cap-ttl";
+    const remaining = typeof c.seconds_remaining === "number" ? c.seconds_remaining : (c.expires_at - now);
+    ttl.dataset.expires = String(c.expires_at);
+    ttl.textContent = fmtCountdown(remaining);
+    if (remaining <= 60) ttl.classList.add("expiring");
+
+    const btn = document.createElement("button");
+    btn.className = "revoke-btn";
+    btn.textContent = "REVOKE";
+    btn.addEventListener("click", async (e) => {
+      e.stopPropagation();
+      btn.disabled = true;
+      try {
+        await postJSON(`/api/revoke/${encodeURIComponent(c.id)}`);
+        state.caps = state.caps.filter(x => x.id !== c.id);
+        renderCaps();
+      } catch { btn.disabled = false; }
+    });
+
+    bottom.appendChild(ttl);
+    bottom.appendChild(btn);
+
+    wrap.appendChild(top);
+    wrap.appendChild(scope);
+    wrap.appendChild(bottom);
+    li.appendChild(wrap);
+    frag.appendChild(li);
+  }
+  $caps.replaceChildren(frag);
+}
+
+// ── render: credentials ──────────────────────────────────────────
+function renderCreds() {
+  if (!state.creds.length) {
+    $credsEmpty.style.display = "";
+    $creds.innerHTML = "";
+    return;
+  }
+  $credsEmpty.style.display = "none";
+  const frag = document.createDocumentFragment();
+  for (const c of state.creds) {
+    const li = document.createElement("li");
+    const row = document.createElement("div");
+    row.className = "cred-row";
+
+    const id = document.createElement("span");
+    id.className = "cred-id";
+    id.textContent = c.id;
+
+    const type = document.createElement("span");
+    type.className = "cred-type-badge";
+    type.textContent = c.type;
+
+    const ts = document.createElement("span");
+    ts.className = "cred-ts";
+    ts.textContent = `registered ${fmtTimeSecs(c.created_at)}`;
+
+    const lock = document.createElement("span");
+    lock.className = "cred-lock";
+    lock.textContent = "■";
+    lock.title = "value never exposed";
+
+    row.appendChild(id);
+    row.appendChild(type);
+    row.appendChild(ts);
+    row.appendChild(lock);
+    li.appendChild(row);
+    frag.appendChild(li);
+  }
+  $creds.replaceChildren(frag);
+}
+
+// ── TTL tick ─────────────────────────────────────────────────────
+function tickTTLs() {
+  const now = Math.floor(Date.now() / 1000);
+  $caps.querySelectorAll(".cap-ttl").forEach(n => {
+    const exp = Number(n.dataset.expires || 0);
+    const rem = exp - now;
+    n.textContent = fmtCountdown(rem);
+    if (rem <= 60) n.classList.add("expiring");
+    else n.classList.remove("expiring");
+  });
+}
+
+// ── uptime ticker ────────────────────────────────────────────────
+function tickUptime() {
+  $uptime.textContent = fmtUptime(Date.now() - state.startedAt);
+}
+
+// ── boot ─────────────────────────────────────────────────────────
+setConnected(false);
+pollEvents();
+pollCaps();
+pollCreds();
+state.ttlTimer    = setInterval(tickTTLs, 1000);
+state.uptimeTimer = setInterval(tickUptime, 1000);
+</script>
 </body>
 </html>
